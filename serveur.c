@@ -12,6 +12,7 @@
 
 #define	NB_CLIENTS_MAX	16;
 
+int     serveur         =0;
 
 /*
  *
@@ -22,41 +23,6 @@ typedef struct lettre {
 	unsigned long v;
 	unsigned long c;
 } lettre;
-
-/*
- *
- *	Thread execute a l'arrivee d'un nouveau client
- *
- */
-void * threadClient(void * args) {
-	char buf[1500], renvoi[1500], host[1024],service[20];
-	int socket = *((int) args);
-	
-    client = 1;
-    while(client) {
-	    recv(socket,buf,sizeof(buf),0); 
-	    printf("Message du client :\n>>> %s\n",buf);
-	    lettre l = countLetters(buf);
-	    bzero(renvoi,sizeof(renvoi));
-	    if(buf[0]=='+')
-		    sprintf(renvoi, "Nombre de consonnes : %d\n", l.c);
-	    else if(buf[0]=='-')
-		    sprintf(renvoi, "Nombre de voyelles : %d\n", l.v);
-	    else if(buf[0]=='/') {
-		    client = 0;				
-		    sprintf(renvoi, "Fin de la session\n");
-		    printf(renvoi, "Fin de la session\n");
-	    } else if(buf[0]=='.') {
-		    client = 0;
-		    serveur = 0;
-		    sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
-	    } else {
-		    sprintf(renvoi, "Commande inconnue !\n");
-        }
-	    send(socket,renvoi,strlen(renvoi),0);
-    }
-    close(socket);
-}
 
 /*
  *
@@ -86,24 +52,63 @@ lettre countLetters(char * s) {
 
 /*
  *
+ *	Thread execute a l'arrivee d'un nouveau client
+ *
+ */
+void * threadClient(void * args) {
+	char        buf[1500], 
+	            renvoi[1500];
+	int         socket = *((int*) args),
+                client = 1;
+                
+    while(client) {
+    	sleep(1);   // on laisse la main
+	    recv(socket,buf,sizeof(buf),0); 
+	    printf("Message du client :\n>>> %s\n",buf);
+	    lettre l = countLetters(buf);
+	    bzero(renvoi,sizeof(renvoi));
+	    if(buf[0]=='+')
+		    sprintf(renvoi, "Nombre de consonnes : %d\n", l.c);
+	    else if(buf[0]=='-')
+		    sprintf(renvoi, "Nombre de voyelles : %d\n", l.v);
+	    else if(buf[0]=='/') {
+		    client = 0;				
+		    sprintf(renvoi, "Fin de la session\n");
+		    printf(renvoi, "Fin de la session\n");
+	    } else if(buf[0]=='.') {
+		    client = 0;
+		    serveur = 0;
+		    sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
+	    } else {
+		    sprintf(renvoi, "Commande inconnue !\n");
+        }
+	    send(socket,renvoi,strlen(renvoi),0);
+    }
+    close(socket);
+}
+
+/*
+ *
  *	Programme serveur multi-threads
  *
  */
 int main(int argc, char * argv[]) {
-	int 					s_ecoute, 
-							scom, 
-							lg_app, 
-							nbClients = 0, 
-							maxClients = NB_CLIENTS_MAX;
-	struct sockaddr_in 		adr; 
-	struct sockaddr_storage	recep;
-	pthread_t * clients = NULL;
+	int 					    s_ecoute, 
+							    scom, 
+							    lg_app, 
+							    nbClients = 0, 
+							    maxClients = NB_CLIENTS_MAX;
+	struct sockaddr_in 		    adr; 
+	struct sockaddr_storage	    recep;
+	pthread_t                 * clients = NULL;
+	char        	            host[1024],
+	                            service[20];
 
     if(argc < 2) {
         printf("\nUsage:\n serveur <port>\n\n");
     } else {
 		if(argc > 2)
-			maxClients = strtoul(args[2], 0, 0);
+			maxClients = strtoul(argv[2], 0, 0);
 		clients = (pthread_t *)malloc(sizeof(pthread_t)*maxClients);		// allocation des threads
 	    s_ecoute=socket(AF_INET,SOCK_STREAM,0); 
 	    printf("Creation de la socket.\n"); 
@@ -122,24 +127,27 @@ int main(int argc, char * argv[]) {
 
 	    printf("En attente d'un client ...\n"); 
 	
-	    int         client = 0,
-	                serveur = 1;
+	    serveur = 1;
 	
 	    while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
 			// on ecoute et allloue un thread
-			while((scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app)) {
-				getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
-    			printf("Recu de %s venant du port %s.\n", host, service);
-				if( pthread_create( &thread_id , NULL ,  connection_handler , (void*) &client_sock) < 0 ) {
-				    perror("Impossible de creer le thread client.\n");
-				}
-			}
-
+			if(nbClients < maxClients) {
+			    printf("On a %d clients.\n", nbClients);
+			    while(serveur && (scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app))) {
+				    getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
+        			printf("Recu de %s venant du port %s.\n", host, service);
+				    if( pthread_create( &clients[nbClients], NULL, threadClient, (void*) &scom) < 0 ) {
+				        perror("Impossible de creer le thread client.\n");
+				    }
+			    }
+		    }
+		    sleep(1);
 	    }
+	    
 	    close(s_ecoute);// arret de l'ecoute
 		int i = 0;
 		for(i = 0 ; i < maxClients ; ++i) {
-			clients
+			pthread_join(clients[i], 0); // attente
 		}
 		
 		free(clients);	// liberation des threads
