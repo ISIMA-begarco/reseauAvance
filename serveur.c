@@ -7,12 +7,62 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
+
+#define	NB_CLIENTS_MAX	16;
+
+
+/*
+ *
+ *	Structure de retour de la fonction de compte
+ *
+ */
 typedef struct lettre {
 	unsigned long v;
 	unsigned long c;
 } lettre;
 
+/*
+ *
+ *	Thread execute a l'arrivee d'un nouveau client
+ *
+ */
+void * threadClient(void * args) {
+	char buf[1500], renvoi[1500], host[1024],service[20];
+	int socket = *((int) args);
+	
+    client = 1;
+    while(client) {
+	    recv(socket,buf,sizeof(buf),0); 
+	    printf("Message du client :\n>>> %s\n",buf);
+	    lettre l = countLetters(buf);
+	    bzero(renvoi,sizeof(renvoi));
+	    if(buf[0]=='+')
+		    sprintf(renvoi, "Nombre de consonnes : %d\n", l.c);
+	    else if(buf[0]=='-')
+		    sprintf(renvoi, "Nombre de voyelles : %d\n", l.v);
+	    else if(buf[0]=='/') {
+		    client = 0;				
+		    sprintf(renvoi, "Fin de la session\n");
+		    printf(renvoi, "Fin de la session\n");
+	    } else if(buf[0]=='.') {
+		    client = 0;
+		    serveur = 0;
+		    sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
+	    } else {
+		    sprintf(renvoi, "Commande inconnue !\n");
+        }
+	    send(socket,renvoi,strlen(renvoi),0);
+    }
+    close(socket);
+}
+
+/*
+ *
+ *	Compte le nombre de voyelles et de consonnes
+ *
+ */
 lettre countLetters(char * s) {
 	lettre l;
 	unsigned i = 0;
@@ -34,15 +84,27 @@ lettre countLetters(char * s) {
 	return l;
 }
 
+/*
+ *
+ *	Programme serveur multi-threads
+ *
+ */
 int main(int argc, char * argv[]) {
-	int s_ecoute, scom, lg_app, i, j; 
-	struct sockaddr_in adr; 
-	struct sockaddr_storage recep; 
-	char buf[1500], renvoi[1500], host[1024],service[20];
+	int 					s_ecoute, 
+							scom, 
+							lg_app, 
+							nbClients = 0, 
+							maxClients = NB_CLIENTS_MAX;
+	struct sockaddr_in 		adr; 
+	struct sockaddr_storage	recep;
+	pthread_t * clients = NULL;
 
     if(argc < 2) {
         printf("\nUsage:\n serveur <port>\n\n");
     } else {
+		if(argc > 2)
+			maxClients = strtoul(args[2], 0, 0);
+		clients = (pthread_t *)malloc(sizeof(pthread_t)*maxClients);		// allocation des threads
 	    s_ecoute=socket(AF_INET,SOCK_STREAM,0); 
 	    printf("Creation de la socket.\n"); 
 	    adr.sin_family=AF_INET; 
@@ -63,35 +125,23 @@ int main(int argc, char * argv[]) {
 	    int         client = 0,
 	                serveur = 1;
 	
-	    while(serveur) {
-		    scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app); 
-		    getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
-		    printf("Recu de %s venant du port %s\n",host, service); 
-		    client = 1;
-		    while(client) { 
-			    recv(scom,buf,sizeof(buf),0); 
-			    printf("Message du client :\n>>> %s\n",buf);
-			    lettre l = countLetters(buf);
-			    bzero(renvoi,sizeof(renvoi));
-			    if(buf[0]=='+')
-				    sprintf(renvoi, "Nombre de consonnes : %d\n", l.c);
-			    else if(buf[0]=='-')
-				    sprintf(renvoi, "Nombre de voyelles : %d\n", l.v);
-			    else if(buf[0]=='/') {
-				    client = 0;				
-				    sprintf(renvoi, "Fin de la session\n");
-				    printf(renvoi, "Fin de la session\n");
-			    } else if(buf[0]=='.') {
-				    client = 0;
-				    serveur = 0;
-				    sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
-			    } else {
-				    sprintf(renvoi, "Commande inconnue !\n");
-                }
-			    send(scom,renvoi,strlen(renvoi),0);
-		    }
-		    close(scom);
-	    } 
-	    close(s_ecoute);
-    } 
+	    while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
+			// on ecoute et allloue un thread
+			while((scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app)) {
+				getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
+    			printf("Recu de %s venant du port %s.\n", host, service);
+				if( pthread_create( &thread_id , NULL ,  connection_handler , (void*) &client_sock) < 0 ) {
+				    perror("Impossible de creer le thread client.\n");
+				}
+			}
+
+	    }
+	    close(s_ecoute);// arret de l'ecoute
+		int i = 0;
+		for(i = 0 ; i < maxClients ; ++i) {
+			clients
+		}
+		
+		free(clients);	// liberation des threads
+    }
 }

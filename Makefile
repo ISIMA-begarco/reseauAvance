@@ -3,7 +3,7 @@
 
 # definition des variables
 CXX = gcc
-CXXFLAGS = -O2 -Wall -Wextra -g
+CXXFLAGS = -O2 -Wall -Wextra -g -lpthread
 
 all : client serveur clean
 
