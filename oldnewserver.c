@@ -13,13 +13,11 @@
 
 #define	NB_CLIENTS_MAX	2
 
-
 int             serveur           = 0,
                 maxClients        = NB_CLIENTS_MAX,
                 s_ecoute          = 0, 
 				nbClients         = 0;       
 pthread_t     * clients           = NULL;
-pthread_mutex_t mutex             = PTHREAD_MUTEX_INITIALIZER;
 
 /*
  *
@@ -43,7 +41,6 @@ int findFreeThread() {
         indice++;
     }
     printf("indice %d\n", indice);
-    fflush(stdin);
     return indice;
 }
 
@@ -82,12 +79,8 @@ void * threadClient(void * args) {
 	char        buf[1500], 
 	            renvoi[1500];
 	int         socket = *((int*) args),
-	            numero = ((int*) args)[1],
                 client = 1;
-                printf("tread n°%d\n", numero);
-                pthread_mutex_lock(&mutex); // verrouillage
-                ((int*) args)[0] = NULL;
-                pthread_mutex_unlock(&mutex); // deverrouillage
+                
     while(client) {
 	    usleep(1);   // on laisse la main
         recv(socket,buf,sizeof(buf),0);
@@ -113,7 +106,6 @@ void * threadClient(void * args) {
 	    send(socket,renvoi,strlen(renvoi),0);
     }
     nbClients--;
-    clients[numero] = NULL;
     close(socket);
 }
 
@@ -151,31 +143,27 @@ void * threadEcoute(void * args) {
     printf("En attente d'un client ...\n"); 
 
     serveur = 1;
-    int tab[2] = {0};
-    while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
-		// on ecoute et allloue un thread
-		if(nbClients < maxClients) {
-		printf("nbClients : %d\n", nbClients);
-	        printf("etat %d %d %d\n", clients[0], clients[1], clients[2]);
-		    scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app);
-			    getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
+    
+		
+	    while(serveur && -1!=(scom = accept(s_ecoute,(struct sockaddr *)&recep, (unsigned long *)&lg_app))) {
+	        if(nbClients < maxClients) {
+		        getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
     			printf("Recu de %s venant du port %s.\n", host, service);
     			int indice = findFreeThread();
+    			printf("NbClient %d indice %d maxclient %d\n", nbClients, indice, maxClients);
     			if(indice < maxClients) {
-    			    tab[0] = scom;
-    			    tab[1] = indice;
-    			    if( pthread_create( &clients[indice], NULL, threadClient, (void*) tab) < 0 ) {
-	    		        perror("Impossible de creer le thread client.\n");
-	    		    } else {
-	    		        nbClients++;
-	    		    }
+    			    if( pthread_create( &clients[indice], NULL, threadClient, (void*) &scom) < 0 ) {
+        		        perror("Impossible de creer le thread client.\n");
+        		    } else {
+        		        nbClients++;
+        		    }
                 } else {
                     printf("Client refuse.\n");
                     close(scom);
                 }
-	    }
-	    usleep(1);
-    }
+            }
+            usleep(1);
+        }
 }
 
 /*
@@ -199,6 +187,7 @@ int main(int argc, char * argv[]) {
 	    serveur = 1;
 	    while(serveur) {
 	        usleep(1);
+	        //printf("etat %d %d\n", clients[0], clients[1]);
 	    }
 	    
 	    close(s_ecoute);            // arret du socket d'ecoute
