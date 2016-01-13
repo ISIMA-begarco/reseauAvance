@@ -5,10 +5,14 @@
 CXX = gcc
 CXXFLAGS = -O2 -Wall -Wextra -g -lpthread
 
-all : client serveur clean
+all : client serveur client_http clean
 
 client : client.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
+	
+client_http : client_http.c
+	$(CXX) $^ -o ./$@ $(CXXFLAGS)
+
 
 serveur : serveur.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
