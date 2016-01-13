@@ -7,15 +7,15 @@
 
 int main(int argc, char *argv[]) { 
 	char buffer[200],texte[200]; 
-	int port, rc, sock,i,c, menu = 0,req_http=0; 
+	int sock,i,c, menu = 0; 
 	struct sockaddr_in addr;
 	struct hostent *entree;
-    
-  if(argc > 2 && !strcmp(argv[1], "-v")) {
-        menu = 1;
+
+	if(argc > 2 && !strcmp(argv[1], "-v")) {
+		menu = 1;
 	} else if(argc < 3) { 
-        printf("\nUsage:\n client [option] <port> [<command><sentence>...]\n\n");
-        printf("Commands:\n +\t\tcount number of consonant\n -\t\tcount number of vowel\n\nOptions:\n -v\t\tuse verbose mode with menu\n\n");
+		printf("\nUsage:\n client [option] <port> [<command><sentence>...]\n\n");
+		printf("Commands:\n +\t\tcount number of consonant\n -\t\tcount number of vowel\n\nOptions:\n -v\t\tuse verbose mode with menu\n\n");
 		exit(1);
 	}
 
@@ -34,7 +34,6 @@ int main(int argc, char *argv[]) {
               iteArg = 3;
                 
   while(nbCom) {
-	  req_http=0;
     bzero(texte,sizeof(texte));
     bzero(buffer,sizeof(buffer));      
     if(menu){                       // cas du menu
@@ -63,11 +62,9 @@ int main(int argc, char *argv[]) {
             //Commande http
             case 3:
                 texte[0] = '&';
-                req_http=1;
                 break;
             case 4:
                 texte[0] = '|';
-                req_http=1;
                 break;
             default:
             		printf("Mauvaise saisie\n");
@@ -82,60 +79,24 @@ int main(int argc, char *argv[]) {
       	
     } else if(argc==3) {                    // cas sans le menu
         i = 0;
-      	printf("Enter your command:\n>>> ",argc); 
+      	printf("Enter your command:\n>>> "); 
         while((c=getchar()) != '\n'){
         	texte[i++]=c;
         }
     } else {                                // cas des commandes en ligne de commande
           strcpy(texte, argv[iteArg++]);
     }
-    if(!req_http){
-		  send(sock,texte,strlen(texte)+1,0);
-		  recv(sock,buffer,sizeof(buffer),0);
-		  printf("Server's message:\n>>> %s\n",buffer);
+	send(sock,texte,strlen(texte)+1,0);
+	recv(sock,buffer,sizeof(buffer),0);
+	printf("Server's message:\n>>> %s\n",buffer);
 		  
-		}else{
-			char* requete_post;
-			char* requete_get;
-			addr.sin_port=htons(atoi(80)); 
-			addr.sin_family=AF_INET; 
-			
-			if(texte[0]='&'){
-				int taille_req_post=64;
-			
-				entree=(struct hostent *)gethostbyname("http://www.isima.fr/~laurenco/ZZ2/nb_letter_get.php");
-				bcopy((char *)entree->h_addr,(char *)&addr.sin_addr,entree->h_length);
-				sock= socket(AF_INET,SOCK_STREAM,0);
-				
-				requete_post=malloc((sizeof(char)*taille_req_post)+sizeof(texte));
-				
-				strcpy(requete_post,"GET http://www.isima.fr/~laurenco/ZZ2/nb_lettre_get.php?phrase=");
-				strcpy(requete_post+taille_req_post,texte);
-								
-			} else { //text[0]='|'
-				entree=(struct hostent *)gethostbyname("http://www.isima.fr/~laurenco/ZZ2/val_phrase_post.php");
-				bcopy((char *)entree->h_addr,(char *)&addr.sin_addr,entree->h_length);
-				sock= socket(AF_INET,SOCK_STREAM,0);
-				
-			}
-			
-			if(connect(sock, (struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0) {
-				printf("Connexion http problem!\n"); 
-				exit(1);
-			}
-			printf("Connexion http established.\n");
-			
-			send(sock,texte,strlen(texte)+1,0);
-		  recv(sock,buffer,sizeof(buffer),0);
-		  printf("Server's message:\n>>> %s\n",buffer);
-		}
-  	nbCom--;
+	nbCom--;
   }
   
   bzero(texte,sizeof(texte));
-  sprintf(texte,"/\0");
+  strcpy(texte,"/\0");
   send(sock,texte,strlen(texte)+1,0);    
-	close(sock);
+  //close(sock);
 
-	return 0;
+  return 0;
 }

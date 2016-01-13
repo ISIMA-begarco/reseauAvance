@@ -18,4 +18,7 @@ serveur : serveur.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
 
 clean :
-	rm -rf *.bak; rm -rf *.o
+	rm -rf *.bak; rm -rf *.o; rm -rf *~;
+	
+wipe : clean
+	rm client serveur client_http
