@@ -40,19 +40,26 @@ int main(int argc, char *argv[]) {
 	printf("Connexion http established.\n");
 
 	if(texte[0]==char_number){
-		sprintf(requete_http,"GET www.isima.fr/~laurenco/ZZ2/nb_lettre_get.php HTTP/1.1\nphrase=%s",texte+1);
-		//sprintf(requete_http,"GET www.isima.fr/ ");
-		if(DEBUG) printf("Requete http : %s\n",requete_http);
+		sprintf(requete_http,"GET /~laurenco/ZZ2/nb_lettre_get.php?phrase=%s HTTP/1.1\r\n"
+				"Host: www.isima.fr\r\n"
+				"\r\n\r\n",texte+1);
+		if(DEBUG) printf("Requete http :\n%s",requete_http);
 	}
-	
-	if(texte[0]==char_value && 0){
-		sprintf(requete_http,"POST www.isima.fr/~laurenco/ZZ2/val_phrase_post.php?phrase=%s",texte+1);
+
+	if(texte[0]==char_value){
+		sprintf(requete_http,"POST /~laurenco/ZZ2/val_phrase_post.php HTTP/1.1\r\n"
+            "Host: www.isima.fr\r\n"
+            "Content-Length: %d\r\n"
+            "Content-Type: text\r\n"
+            "\r\n"
+            "phrase=%s",strlen(texte),texte+1);
 		if(DEBUG) printf("Requete http : %s\n",requete_http);
 	}
 
-	if(send(sock,requete_http,strlen(requete_http)+1,0)){
-		while(1||recv(sock,buffer,sizeof(buffer),0)){
-			printf("Server's message:\n>>> %s\n",buffer);
+	if(send(sock,requete_http,strlen(requete_http),0)){
+		printf("Server's message: >>>\n");
+		while(recv(sock,buffer,sizeof(buffer),0)){
+			printf("%s\n",buffer);
 		}
 	}else{
 		printf("Send error");
@@ -60,7 +67,5 @@ int main(int argc, char *argv[]) {
 	}
 	
   bzero(texte,sizeof(texte));
-  strcpy(texte,"/\0");
-  send(sock,texte,strlen(texte)+1,0);
 	return 0;
 }
