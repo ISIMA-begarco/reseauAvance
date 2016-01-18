@@ -5,12 +5,12 @@
 #include <sys/socket.h>
 #include <string.h> 
 
-#define DEBUG 1
+#define DEBUG 0
 
 int main(int argc, char *argv[]) { 
-	char buffer[200],texte[200],requete_http[200],char_number='n',char_value='v';
+	char buffer[200],res[1024],texte[200],requete_http[200],token[200],char_number='#',char_value='=';
 	char* add_serveur = "www.isima.fr";
-	int sock=0; 
+	int sock=0; int resultat_traitement=-1;
 	struct sockaddr_in addr;
 	struct hostent *entree;
      
@@ -44,23 +44,38 @@ int main(int argc, char *argv[]) {
 				"Host: www.isima.fr\r\n"
 				"\r\n\r\n",texte+1);
 		if(DEBUG) printf("Requete http :\n%s",requete_http);
+		strcpy(token,"La phrase comporte : ");
 	}
 
 	if(texte[0]==char_value){
 		sprintf(requete_http,"POST /~laurenco/ZZ2/val_phrase_post.php HTTP/1.1\r\n"
             "Host: www.isima.fr\r\n"
+            "Content-Type: application/x-www-form-urlencoded\r\n"
             "Content-Length: %d\r\n"
-            "Content-Type: text\r\n"
             "\r\n"
-            "phrase=%s",strlen(texte),texte+1);
-		if(DEBUG) printf("Requete http : %s\n",requete_http);
+            "phrase=%s\r\n",(int)(7+strlen(texte))-1,texte+1);
+		if(DEBUG) printf("Requete http :\n%s",requete_http);
+		strcpy(token,"La phrase a une valeur de : ");
 	}
 
 	if(send(sock,requete_http,strlen(requete_http),0)){
 		printf("Server's message: >>>\n");
 		while(recv(sock,buffer,sizeof(buffer),0)){
-			printf("%s\n",buffer);
+			strcat(res,buffer);
 		}
+		if(res==NULL){
+			printf("Pas de reponse\n");
+			exit(1);
+		}
+		
+		if(DEBUG) printf("\n%s\n",res);
+		
+		char* temp =strstr(res,token);
+		strcat(token,"%d");
+		sscanf(temp,token,&resultat_traitement);
+		
+		printf("Resultat calcule a distance : %d\n",resultat_traitement);
+		
 	}else{
 		printf("Send error");
 		exit(1);
@@ -69,3 +84,11 @@ int main(int argc, char *argv[]) {
   bzero(texte,sizeof(texte));
 	return 0;
 }
+/*
+POST /~laurenco/ZZ2/val_phrase_post.php HTTP/1.1 \r\n Host: www.isima.fr
+Content-Length: 11
+Content-Type: text/plain
+
+phrase=caca
+
+*/

@@ -86,6 +86,8 @@ int main(int argc, char *argv[]) {
     } else {                                // cas des commandes en ligne de commande
           strcpy(texte, argv[iteArg++]);
     }
+  texte[strlen(texte)]='\n';
+  texte[strlen(texte)+1]='\0';
 	send(sock,texte,strlen(texte)+1,0);
 	recv(sock,buffer,sizeof(buffer),0);
 	printf("Server's message:\n>>> %s\n",buffer);

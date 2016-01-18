@@ -109,7 +109,7 @@ void * threadClient(void * args) {
 			sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
 		} else {
 			sprintf(renvoi, "Commande inconnue !\n");
-			}
+		}
 		send(socket,renvoi,strlen(renvoi),0);
 	}
 	nbClients--;
