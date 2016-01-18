@@ -5,15 +5,11 @@
 CXX = gcc
 CXXFLAGS = -O2 -Wall -Wextra -g -lpthread
 
-all : client serveur client_http clean
+all : client serveur clean
 
 client : client.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
 	
-client_http : client_http.c
-	$(CXX) $^ -o ./$@ $(CXXFLAGS)
-
-
 serveur : serveur.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
 
@@ -21,4 +17,4 @@ clean :
 	rm -rf *.bak; rm -rf *.o; rm -rf *~;
 	
 wipe : clean
-	rm client serveur client_http
+	rm client serveur
