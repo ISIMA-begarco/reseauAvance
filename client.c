@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
 	if(argc == 2 && !strcmp(argv[1], "-v")) {
 		menu = 1;
 	} else if(argc > 2 && !strcmp(argv[1], "-o")) {
-		chooseHttp=0;
+		chooseHttp=1;
+		if(DEBUG) printf("ONLY HTTP\n");
 	} else if(argc < 3) { 
 		printf("\nUsage:\n client [option] <server address> <port> [<command><sentence>...]\n\n");
 		printf("Commands:\n %c\t\tcount number of consonant\n"
@@ -36,9 +37,9 @@ int main(int argc, char *argv[]) {
 		char_consonant,char_vowel,char_number,char_value);
 		exit(1);
 	}
-	int         nbCom = argc==3 || menu ? 1 : argc - 3,
-		    	iteArg = 3;
-		        
+	int         nbCom = (argc==3 || menu) ? (chooseHttp?argc-2:1) : (chooseHttp?argc-2:argc - 3),
+		    	iteArg = (chooseHttp?2:3);
+	if(DEBUG) printf("Number of commands: %d %d\n", nbCom, iteArg);
 	while(nbCom) {
 		mode_http=0;					// Pour eviter tout traitement non prevu
 		
@@ -86,7 +87,7 @@ int main(int argc, char *argv[]) {
 		  	    texte[i++]=c;
 		  	}
 		  	
-		} else if(argc==3) {                    // cas sans le menu
+		} else if(argc==3 && !chooseHttp) {                    // cas sans le menu
 			i = 0;
 		  	printf("Enter your command:\n>>> "); 
 			while((c=getchar()) != '\n'){
@@ -129,7 +130,7 @@ int main(int argc, char *argv[]) {
 						
 				if(DEBUG) printf("Http request:\n%s",requete_http);
 				
-				strcpy(token,"Your sentence contains: ");
+				strcpy(token,"La phrase comporte : ");
 				strcpy(recep_msg,"Number of letters: ");
 				
 			}else if(texte[0]==char_value){
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
 					
 				if(DEBUG) printf("Requete http :\n%s",requete_http);
 				
-				strcpy(token,"Value of sentence: ");
+				strcpy(token,"La phrase a une valeur de : ");
 				strcpy(recep_msg,"Value of sentence: ");
 				
 			}else{
@@ -179,6 +180,10 @@ int main(int argc, char *argv[]) {
 			if(!mode_http){
 				recv(sock,buffer,sizeof(buffer),0);
 				printf("Server's message:\n>>> %s\n",buffer);
+				
+				bzero(texte,sizeof(texte));
+				strcpy(texte,"/\0");
+				send(sock,texte,strlen(texte)+1,0);
 			}else{
 				while(recv(sock,buffer,sizeof(buffer),0)){
 					strcat(res_http,buffer);
@@ -208,9 +213,6 @@ int main(int argc, char *argv[]) {
 		nbCom--;
 	}
 
-	bzero(texte,sizeof(texte));
-	strcpy(texte,"/\0");
-	send(sock,texte,strlen(texte)+1,0);    
 	//close(sock);
 
 	return 0;
