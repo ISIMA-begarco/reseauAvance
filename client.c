@@ -105,10 +105,12 @@ int main(int argc, char *argv[]) {
 			texte[strlen(texte)+1]='\0';
 			
 			if(menu) {
-				printf("\nEnter server's address:\n>>> "); 
+				printf("\nEnter server's address:\n>>> ");
+				i = 0;
 				while((c=getchar()) != '\n'){
 					chooseAddr[i++]=c;
 				}
+				chooseAddr[i]='\0';
 				printf("\nEnter server's port:\n>>> "); 
 				scanf("%d", &choosePort);
 			}
