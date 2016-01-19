@@ -9,8 +9,8 @@
 
 int main(int argc, char *argv[]) { 
 	char buffer[200],texte[200],res_http[1024],requete_http[200],token[200],recep_msg[100];
-	char add_serveur[200];
-	int port=-1;
+	char add_serveur[200], chooseAddr[200];
+	int port=-1, choosePort = -1, chooseHttp=0;
 	
 	//Caractere choisissant le traitement
 	char char_consonant='+';
@@ -22,15 +22,17 @@ int main(int argc, char *argv[]) {
 	struct sockaddr_in addr;
 	struct hostent *entree;
 
-	if(argc > 2 && !strcmp(argv[1], "-v")) {
+	if(argc == 2 && !strcmp(argv[1][, "-v")) {
 		menu = 1;
+	} else if(argc > 2 && !strcmp(argv[1], "-o")) {
+		chooseHttp=0;
 	} else if(argc < 3) { 
 		printf("\nUsage:\n client [option] <server address> <port> [<command><sentence>...]\n\n");
 		printf("Commands:\n %c\t\tcount number of consonant\n"
 		" %c\t\tcount number of vowel\n"
 		" %c\t\tcount number of letter (address and port doesn\'t matter)\n"
 		" %c\t\tcount value of the sentence (address and port doesn\'t matter)\n"
-		"\nOptions:\n -v\t\tuse verbose mode with menu\n\n",
+		"\nOptions:\n -v\t\tuse verbose mode with menu\n -o\t\tuse only http requests\n\n",
 		char_consonant,char_vowel,char_number,char_value);
 		exit(1);
 	}
@@ -60,7 +62,7 @@ int main(int argc, char *argv[]) {
 			switch(choice) {
 				//Commandes ssh
 				case 1:
-				    texte[0] = char_consonant;
+				    texte[0] = char_consonant;i = 1;					
 		  			break;
 				case 2:
 				    texte[0] = char_vowel;
@@ -98,12 +100,21 @@ int main(int argc, char *argv[]) {
 		//Test mode HTTP
 		mode_http = texte[0]==char_number || texte[0]==char_value;
 		
-		if(!mode_http){							//Connection ssh
+		if(!mode_http && !chooseHttp){							//Connection ssh
 			texte[strlen(texte)]='\n';
 			texte[strlen(texte)+1]='\0';
 			
-			port=atoi(argv[(menu?3:2)]);
-			strcpy(add_serveur,argv[(menu?2:1)]);
+			if(menu) {
+				printf("\nEnter server's address:\n>>> "); 
+				while((c=getchar()) != '\n'){
+					chooseAddr[i++]=c;
+				}
+				printf("\nEnter server's port:\n>>> "); 
+				scanf("%d", &choosePort);
+			}
+			
+			port=(menu?choosePort:atoi(argv[2]));
+			strcpy(add_serveur,(menu?chooseAddr:argv[1]));
 		}else{									//Connection http
 			port=80;
 			strcpy(add_serveur,"www.isima.fr");

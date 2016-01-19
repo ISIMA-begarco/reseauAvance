@@ -11,7 +11,7 @@
 #include <fcntl.h>
 
 
-#define	NB_CLIENTS_MAX	2
+#define	NB_CLIENTS_MAX	1024
 
 
 int             serveur           = 0,
