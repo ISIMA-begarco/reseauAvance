@@ -7,22 +7,22 @@
 
 #define DEBUG 0
 
-int main(int argc, char *argv[]) { 
+int main(int argc, char *argv[]) {
 	char buffer[200],texte[200],res_http[1024],requete_http[200],token[200],recep_msg[100];
 	char add_serveur[200], chooseAddr[200];
 	int port=-1, choosePort = -1, chooseHttp=0;
 	
 	//Caractere choisissant le traitement
 	char char_consonant='+';
-	char char_vowel='-';		
+	char char_vowel='-';
 	char char_number='?';
 	char char_value='=';
 	
-	int sock,i,c, menu = 0, mode_http=0, resultat_traitement=-1; 
+	int sock,i,c, menu = 0, mode_http=0, resultat_traitement=-1;
 	struct sockaddr_in addr;
 	struct hostent *entree;
 
-	if(argc == 2 && !strcmp(argv[1][, "-v")) {
+	if(argc == 2 && !strcmp(argv[1], "-v")) {
 		menu = 1;
 	} else if(argc > 2 && !strcmp(argv[1], "-o")) {
 		chooseHttp=0;
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 				    texte[0] = char_value;
 				    break;
 				default:
-					printf("Mauvaise saisie\n");
+					printf("Bad entry.\n");
 				    break;
 			}
 			  
@@ -125,10 +125,10 @@ int main(int argc, char *argv[]) {
 						"Host: www.isima.fr\r\n"
 						"\r\n\r\n",texte+1);
 						
-				if(DEBUG) printf("Requete http :\n%s",requete_http);
+				if(DEBUG) printf("Http request:\n%s",requete_http);
 				
-				strcpy(token,"La phrase comporte : ");
-				strcpy(recep_msg,"Number of letter : ");
+				strcpy(token,"Your sentence contains: ");
+				strcpy(recep_msg,"Number of letters: ");
 				
 			}else if(texte[0]==char_value){
 				// Requete POST => valeur phrase
@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
 					
 				if(DEBUG) printf("Requete http :\n%s",requete_http);
 				
-				strcpy(token,"La phrase a une valeur de : ");
-				strcpy(recep_msg,"Value of sentence : ");
+				strcpy(token,"Value of sentence: ");
+				strcpy(recep_msg,"Value of sentence: ");
 				
 			}else{
 				printf("Attention erreur dans le mode HTTP\n reception d'un caractere %c\n",texte[0]);
@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
 			printf("Send error");
 			exit(1);
 		}
-			  
+
 		nbCom--;
 	}
 

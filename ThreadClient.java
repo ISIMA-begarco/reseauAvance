@@ -49,24 +49,26 @@ public class ThreadClient extends Thread {
 			sortie = new PrintStream(client.getOutputStream());
 			BufferedReader keyboard = new BufferedReader (reader);
 			StringBuffer response = new StringBuffer();
-	
+
 			line = keyboard.readLine();
-			System.out.println("Requete du client : " + line);
-			
+			System.out.println("Client's request:"+ '\n' +">>> "+ line);
+
 			Lettre l = countLetters(line);
-			
+
 			if(line.charAt(0)=='+') {
-				response.append("Nombre de consonnes : "+l.c);
+				response.append("Number of consonants: "+l.c);
 			} else if(line.charAt(0)=='-') {
-				response.append("Nombre de voyelles : "+l.v);
+				response.append("Number of vowels: "+l.v);
 			} else {
-				response.append("Commande inconnue !\n");
+				response.append("Unknown request!\n");
 			}
-			
+
 			response.append('\0');
 			sortie.println(response);
+			System.out.println("Server's response:"+'\n'+">>> "+response);
+			System.out.println("Connexion closed.");
 			client.close();
-				
+
 		} catch(Exception e) {
 			e.printStackTrace();
 		}

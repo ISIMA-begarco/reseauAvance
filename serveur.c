@@ -38,11 +38,11 @@ typedef struct lettre {
  */
 int findFreeThread() {
     int indice = 0;
-    
+
     while(indice < maxClients && clients[indice]!=0) {
         indice++;
     }
-    printf("indice %d\n", indice);
+
     fflush(stdin);
     return indice;
 }
@@ -58,7 +58,7 @@ lettre countLetters(char * s) {
 
 	l.v = 0;
 	l.c = 0;
-	
+
 	while(s[i] != 0) {
 		if(isalpha(s[i])) {
 			if(strchr("eaiouyEAIOUY", s[i])) {
@@ -84,31 +84,31 @@ void * threadClient(void * args) {
 	int         socket = *((int*) args),
 	            numero = ((int*) args)[1],
 							client = 1;
-	printf("tread n°%d\n", numero);
+
 	pthread_mutex_lock(&mutex); // verrouillage
 	((int*) args)[0] = 0;
 	pthread_mutex_unlock(&mutex); // deverrouillage
 	while(client) {
 		usleep(1);   // on laisse la main
 			recv(socket,buf,sizeof(buf),0);
-		printf("Message du client :\n>>> %s\n",buf);
+		printf("Client's request:\n>>> %s\n",buf);
 		lettre l = countLetters(buf);
 		bzero(renvoi,sizeof(renvoi));
 		if(buf[0]=='+')
-			sprintf(renvoi, "Nombre de consonnes : %lu\n", l.c);
+			sprintf(renvoi, "Number of consonants: %lu\n", l.c);
 		else if(buf[0]=='-')
-			sprintf(renvoi, "Nombre de voyelles : %lu\n", l.v);
+			sprintf(renvoi, "Number of vowels: %lu\n", l.v);
 		else if(buf[0]=='/') {
-			client = 0;				
-			sprintf(renvoi, "Fin de la session\n");
-			printf(renvoi, "Fin de la session\n");
+			client = 0;
+			sprintf(renvoi, "Session ended.\n");
+			printf(renvoi, "Session ended.\n");
 		} else if(buf[0]=='.') {
 			client = 0;
 			serveur = 0;
 			close(s_ecoute);// arret de l'ecoute
-			sprintf(renvoi, "Fin de la session\n>>> Arrêt du serveur\n");
+			sprintf(renvoi, "Session ended.\n>>> Server stopped.\n");
 		} else {
-			sprintf(renvoi, "Commande inconnue !\n");
+			sprintf(renvoi, "Unknown request!\n");
 		}
 		send(socket,renvoi,strlen(renvoi),0);
 	}
@@ -133,45 +133,43 @@ void * threadEcoute(void * args) {
 	                          service[20];
 
 	s_ecoute=socket(AF_INET,SOCK_STREAM,0); 
-	printf("Creation de la socket.\n"); 
+	printf("Socket created.\n"); 
 	adr.sin_family=AF_INET; 
 	adr.sin_port=htons(*(int*)args); 
 	adr.sin_addr.s_addr=INADDR_ANY; 
 
 	if(bind(s_ecoute,(struct sockaddr *)&adr,sizeof(struct sockaddr_in)) !=0) { 
-		printf("Probleme de bind sur v4\n"); 
+		printf("Bind problem on v4\n"); 
 		exit(1);
 	} 
 
 	if(listen(s_ecoute,5) != 0) { 
-		printf("Probleme d'ecoute.\n"); exit(1);
+		printf("Listen problem.\n"); exit(1);
 	} 
 	
 	//fcntl(s_ecoute, F_SETFL, O_NONBLOCK);       // rend la socket non bloquante
 	
-	printf("En attente d'un client ...\n"); 
+	printf("Waiting for client...\n"); 
 
 	serveur = 1;
 	int tab[2] = {0};
 	while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
 	// on ecoute et allloue un thread
 		if(nbClients < maxClients) {
-			printf("nbClients : %d\n", nbClients);
-			printf("etat %d %d %d\n", (int)clients[0], (int)clients[1], (int)clients[2]);
 			scom = accept(s_ecoute,(struct sockaddr *)&recep, (socklen_t *)&lg_app);
 			getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
-			printf("Recu de %s venant du port %s.\n", host, service);
+			printf("Received %s from %s.\n", host, service);
 			int indice = findFreeThread();
 			if(indice < maxClients) {
 					tab[0] = scom;
 					tab[1] = indice;
 					if( pthread_create( &clients[indice], NULL, threadClient, (void*) tab) < 0 ) {
-							perror("Impossible de creer le thread client.\n");
+							perror("Cannot create client thread.\n");
 					} else {
 							nbClients++;
 					}
 			} else {
-					printf("Client refuse.\n");
+					printf("Client refused.\n");
 					close(scom);
 			}
 		}
@@ -195,7 +193,7 @@ int main(int argc, char * argv[]) {
 		pthread_t ecoute;
 		int port = atoi(argv[1]);
 		if( pthread_create( &ecoute, NULL, threadEcoute, (void*)&port) < 0 ) {
-	        perror("Impossible de creer le thread d'ecoute'.\n");
+	        perror("Cannot throw listening thread.\n");
 	    }
 	    
 	    serveur = 1;

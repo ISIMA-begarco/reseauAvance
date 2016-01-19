@@ -14,7 +14,7 @@ serveur : serveur.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
 
 serveurJava : JServeur.java ThreadClient.java
-	mkdir classes
+	rm -rf classes; mkdir classes
 	javac -d classes JServeur.java
 
 clientSecu : clientSecu.c

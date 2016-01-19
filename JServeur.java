@@ -11,11 +11,11 @@ public class JServeur {
 		}
 		port = new Integer(args[0]).intValue();
 		ServerSocket s = new ServerSocket (port);
-		System.out.println("La socket serveur est cree");
+		System.out.println("Server on.");
 		while (true) {
 		    soc = s.accept();
-		    System.out.println("Connexion realise a " + soc.toString());
-		    
+		    System.out.println("Connexion realised to " + soc.toString());
+
 		    /// Lancement d'un nouveau fred
 		    ThreadClient t = new ThreadClient(soc);
 		    t.run();
