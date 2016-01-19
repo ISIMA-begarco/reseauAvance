@@ -22,18 +22,3 @@ public class JServeur {
 		}
 	}
 }
-
-
-/**
-Creation du certificat ssl
-1- generation de la cle privee :
-	openssl genrsa -out server.key 1024 ou 2048
-2- demande de signature
-	openssl req -new -key server.key -out server.csr
-3- auto signe
-	openssl x509 -req -days 365 -in server.csr -signkey server.key - out server.crt
-
-4- le serveur a besoin de server.key et server.crt
-
-5- pour compiler -lssl et -lcrypto
-**/
