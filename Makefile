@@ -5,7 +5,7 @@
 CXX = gcc
 CXXFLAGS = -O2 -Wall -Wextra -g -lpthread
 
-all : client serveur serveurJava clientSecu ServeurSecu clean
+all : client serveur serveurJava clientSecu serveurSecu clean
 
 client : client.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS)
@@ -18,7 +18,7 @@ serveurJava : JServeur.java ThreadClient.java
 	javac -d classes JServeur.java
 
 clientSecu : clientSecu.c
-	$(CXX) $^ -o ./$@ $(CXXFLAGS) -lssl -lcrypto
+	$(CXX) $^ -o  ./$@ $(CXXFLAGS) -lssl -lcrypto
 	
 serveurSecu : serveurSecu.c
 	$(CXX) $^ -o ./$@ $(CXXFLAGS) -lssl -lcrypto
@@ -27,4 +27,4 @@ clean :
 	rm -rf *.bak; rm -rf *.o; rm -rf *~
 	
 wipe : clean
-	rm client serveur; rm -rf classes
+	rm client clientSecu serveur serveurSecu; rm -rf classes

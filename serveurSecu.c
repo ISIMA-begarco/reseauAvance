@@ -91,40 +91,55 @@ lettre countLetters(char * s) {
 void * threadClient(void * args) {
 	char        buf[1500], 
 	            renvoi[1500];
-	int         socket = *((int*) args),
-	            numero = ((int*) args)[1],
-							client = 1;
-
-	pthread_mutex_lock(&mutex); // verrouillage
-	((int*) args)[0] = 0;
-	pthread_mutex_unlock(&mutex); // deverrouillage
-	while(client) {
-		usleep(1);   // on laisse la main
-			recv(socket,buf,sizeof(buf),0);
-		printf("Client's request:\n>>> %s\n",buf);
-		lettre l = countLetters(buf);
-		bzero(renvoi,sizeof(renvoi));
-		if(buf[0]=='+')
-			sprintf(renvoi, "Number of consonants: %lu\n", l.c);
-		else if(buf[0]=='-')
-			sprintf(renvoi, "Number of vowels: %lu\n", l.v);
-		else if(buf[0]=='/') {
-			client = 0;
-			sprintf(renvoi, "Session ended.\n");
-			printf(renvoi, "Session ended.\n");
-		} else if(buf[0]=='.') {
-			client = 0;
-			serveur = 0;
-			close(s_ecoute);// arret de l'ecoute
-			sprintf(renvoi, "Session ended.\n>>> Server stopped.\n");
-		} else {
-			sprintf(renvoi, "Unknown request!\n");
+	int         numero = ((int*) args)[1],
+				client = 1;
+	int sd, bytes;
+	
+	SSL* ssl = ((SSL**)args)[0];
+	
+	if ( SSL_accept(ssl) == -1 )  //do SSL-protocol accept
+        ERR_print_errors_fp(stderr);
+    else{
+		while(client) {
+			usleep(1);   // on laisse la main
+			ShowCerts(ssl);        // get any certificates du client
+			bytes = SSL_read(ssl, buf, sizeof(buf)); // lecture
+			printf("lecture de %d bytes\n",bytes);
+			if ( bytes > 0 )
+			{
+				buf[bytes] = 0;
+				printf("Client msg: \"%s\"\n", buf);
+				
+				lettre l = countLetters(buf);
+				bzero(renvoi,sizeof(renvoi));
+				if(buf[0]=='+')
+					sprintf(renvoi, "Number of consonants: %lu\n", l.c);
+				else if(buf[0]=='-')
+					sprintf(renvoi, "Number of vowels: %lu\n", l.v);
+				else if(buf[0]=='/') {
+					client = 0;
+					sprintf(renvoi, "Session ended.\n");
+					printf(renvoi, "Session ended.\n");
+				} else if(buf[0]=='.') {
+					client = 0;
+					serveur = 0;
+					close(s_ecoute);// arret de l'ecoute
+					sprintf(renvoi, "Session ended.\n>>> Server stopped.\n");
+				} else {
+					sprintf(renvoi, "Unknown request!\n");
+				}
+				SSL_write(ssl, renvoi, strlen(renvoi));// envoie
+			}else{
+           		ERR_print_errors_fp(stderr);
+           	}
 		}
-		send(socket,renvoi,strlen(renvoi),0);
 	}
-	nbClients--;
+	sd = SSL_get_fd(ssl);       // get socket connection 
+    SSL_free(ssl);         // release SSL state
+    close(sd);          // close connection*/
+   
+   	nbClients--;
 	clients[numero] = 0;
-	close(socket);
 	pthread_exit(NULL);
 }
 
@@ -134,28 +149,25 @@ void * threadClient(void * args) {
  *
  */
 void * threadEcoute(void * args) {
-	int    										scom, 
-														lg_app;
-	struct sockaddr_in 		    adr; 
-	struct sockaddr_storage	  recep;
+	int 	scom,
+		//	lg_app,
+			s_ecoute;
+	struct sockaddr_in 		    appelant;
+	
+	socklen_t len = sizeof(appelant); 
 
-	char        	            host[1024],
-	                          service[20];
+	//char        	            host[1024],
+	//                          service[20];
+	                          
+	SSL_CTX *ctx;
+	SSL *ssl;
+	int portnum = *((int*)args);
 
-	s_ecoute=socket(AF_INET,SOCK_STREAM,0); 
-	printf("Socket created.\n"); 
-	adr.sin_family=AF_INET; 
-	adr.sin_port=htons(*(int*)args); 
-	adr.sin_addr.s_addr=INADDR_ANY; 
-
-	if(bind(s_ecoute,(struct sockaddr *)&adr,sizeof(struct sockaddr_in)) !=0) { 
-		printf("Bind problem on v4\n"); 
-		exit(1);
-	} 
-
-	if(listen(s_ecoute,5) != 0) { 
-		printf("Listen problem.\n"); exit(1);
-	} 
+	SSL_library_init();   // initialisation librairie ssl
+	ctx= InitCTX();  // initialisation context SSL -> fct 
+	LoadCertificates(ctx, "server.crt", "server.key"); 
+	//load certs
+	s_ecoute = OpenListener(portnum);	
 	
 	//fcntl(s_ecoute, F_SETFL, O_NONBLOCK);       // rend la socket non bloquante
 	
@@ -166,12 +178,12 @@ void * threadEcoute(void * args) {
 	while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
 	// on ecoute et allloue un thread
 		if(nbClients < maxClients) {
-			scom = accept(s_ecoute,(struct sockaddr *)&recep, (socklen_t *)&lg_app);
-			getnameinfo((struct sockaddr *)&recep,sizeof(recep), host, sizeof(host),service,sizeof(service),0);
-			printf("Received %s from %s.\n", host, service);
+			scom = accept(s_ecoute, (struct sockaddr*)&appelant,&len);
+			ssl = SSL_new(ctx);   // get new ssl state with context 
+			SSL_set_fd(ssl, scom);   /// set connection socket to SSL state
 			int indice = findFreeThread();
 			if(indice < maxClients) {
-					tab[0] = scom;
+					tab[0] = (int)ssl;
 					tab[1] = indice;
 					if( pthread_create( &clients[indice], NULL, threadClient, (void*) tab) < 0 ) {
 							perror("Cannot create client thread.\n");
@@ -185,6 +197,8 @@ void * threadEcoute(void * args) {
 		}
 		usleep(1);
 	}
+	close(s_ecoute);          
+	SSL_CTX_free(ctx);    
 	pthread_exit(NULL);
 }
 
@@ -197,8 +211,9 @@ int main(int argc, char * argv[]) {
 	if(argc < 2) {
         printf("\nUsage:\n serveur <port> [NB_MAX_CLIENTS]\n\n");
   } else {
-	  if(argc > 2)
+	  	if(argc > 2){
 		  maxClients = strtoul(argv[2], 0, 0);
+		}
 		clients = (pthread_t *)malloc(sizeof(pthread_t)*maxClients);		// allocation des threads
 		pthread_t ecoute;
 		int port = atoi(argv[1]);
@@ -225,21 +240,6 @@ int main(int argc, char * argv[]) {
   }
   return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 /// Fichier serveur_ssl.c pour ipv4
@@ -281,35 +281,36 @@ void ShowCerts(SSL* ssl) {
 }
 
 
-int main(int argc, char *argv[])
-{   SSL_CTX *ctx;
-  SSL *ssl;
-  char service[20],host[100];
-  int s_ecoute,s_com, debut=1;
-  int portnum = 2000;
-  struct sockaddr_in appelant;
-  socklen_t len = sizeof(appelant);
+/*int main(int argc, char *argv[])
+{   
+	SSL_CTX *ctx;
+	SSL *ssl;
+	char service[20],host[100];
+	int s_ecoute,s_com, debut=1;
+	int portnum = 2000;
+	struct sockaddr_in appelant;
+	socklen_t len = sizeof(appelant);
+
+	SSL_library_init();   // initialisation librairie ssl
+	ctx= InitCTX();  // initialisation context SSL -> fct 
+	LoadCertificates(ctx, "server.crt", "server.key"); 
+	//load certs
+	s_ecoute = OpenListener(portnum);
+	while(debut)
+	{
+		s_com=accept(s_ecoute, (struct sockaddr*)&appelant,&len);
+		ssl = SSL_new(ctx);   // get new ssl state with context 
+		SSL_set_fd(ssl, s_com);   /// set connection socket to SSL state
+		Servlet(ssl);         // coeur du progamme
+	}
+	close(s_ecoute);          
+	SSL_CTX_free(ctx);    
  
-    SSL_library_init();   /* initialisation librairie ssl */
-    ctx= InitCTX();  /* initialisation context SSL -> fct */
-    LoadCertificates(ctx, "server.crt", "server.key"); 
-			/* load certs */
-    s_ecoute = OpenListener(portnum);
-        while(debut)
-      {
-	s_com=accept(s_ecoute, (struct sockaddr*)&appelant,&len);
-     ssl = SSL_new(ctx);   /* get new ssl state with context */
-     SSL_set_fd(ssl, s_com);   /* set connection socket to SSL state */
-     Servlet(ssl);         /* coeur du progamme */ 
-      }
-    close(s_ecoute);          
-    SSL_CTX_free(ctx);    
- 
-}
+}*/
 
 void LoadCertificates(SSL_CTX* ctx, char* CertFile, char* KeyFile) {
     /* set the local certificate from CertFile */
-if ( SSL_CTX_use_certificate_file(ctx, CertFile,SSL_ FILETYPE_PEM)<=0 )
+if ( SSL_CTX_use_certificate_file(ctx, CertFile,SSL_FILETYPE_PEM)<=0 )
     {   ERR_print_errors_fp(stderr);
         abort(); }
     
@@ -341,31 +342,31 @@ int OpenListener(int port) {
     return sd;
 }
 
-void Servlet(SSL* ssl) {
+/*void Servlet(SSL* ssl) {
 	char buf[1024];
     char reply[1024];
     int sd, bytes;
     
     char *retour="Merci, mais ici tout va bien";
 
-    if ( SSL_accept(ssl) == -1 )  /* do SSL-protocol accept */
+    if ( SSL_accept(ssl) == -1 )  // do SSL-protocol accept 
         ERR_print_errors_fp(stderr);
     else
     {
-        ShowCerts(ssl);        /* get any certificates du client*/
-        bytes = SSL_read(ssl, buf, sizeof(buf)); /* lecture */
+        ShowCerts(ssl);        // get any certificates du client
+        bytes = SSL_read(ssl, buf, sizeof(buf)); // lecture
 	printf("lecture de %d bytes\n",bytes);
         if ( bytes > 0 )
         {
             buf[bytes] = 0;
             printf("Client msg: \"%s\"\n", buf);
             sprintf(reply, retour, buf);   
-            SSL_write(ssl, reply, strlen(reply)); /* envoie */
+            SSL_write(ssl, reply, strlen(reply)); // envoie
         }
         else
             ERR_print_errors_fp(stderr);
     }
-    sd = SSL_get_fd(ssl);       /* get socket connection */
-    SSL_free(ssl);         /* release SSL state */
-    close(sd);          /* close connection */
-}
+    sd = SSL_get_fd(ssl);       // get socket connection
+    SSL_free(ssl);         // release SSL state
+    close(sd);          // close connection
+}*/

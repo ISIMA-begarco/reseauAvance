@@ -9,6 +9,9 @@
 
 #define DEBUG 0
 
+//To install openssl
+//sudo apt-get install libssl-dev
+
 // declaration de fonctions utiles
 SSL_CTX* InitCTX(void);
 void ShowCerts(SSL* ssl);
@@ -19,6 +22,10 @@ int main(int argc, char *argv[]) {
 	char buffer[200],texte[200],res_http[1024],requete_http[200],token[200],recep_msg[100];
 	char add_serveur[200], chooseAddr[200];
 	int port=-1, choosePort = -1, chooseHttp=0;
+	
+	SSL *ssl;
+  	SSL_CTX *ctx;
+ 	int s_com, bytes;
 	
 	//Caractere choisissant le traitement
 	char char_consonant='+';
@@ -121,7 +128,10 @@ int main(int argc, char *argv[]) {
 				}
 				chooseAddr[i]='\0';
 				printf("\nEnter server's port:\n>>> "); 
-				scanf("%d", &choosePort);
+				if(!scanf("%d", &choosePort)){
+					printf("Scanf error");
+					exit(1);
+				}
 			}
 			
 			port=(menu?choosePort:atoi(argv[2]));
@@ -162,37 +172,62 @@ int main(int argc, char *argv[]) {
 			// On donne a la variable d'envoie la requete http
 			strcpy(texte,requete_http);
 		}
-	
-		// Creation de la socket
-		addr.sin_port=htons(port); 
-		addr.sin_family=AF_INET; 
-	
-		entree=(struct hostent *)gethostbyname(add_serveur);
-		if (entree==NULL){
-			printf("Connexion host problem! %s unreachable\n",add_serveur);
-			exit(1);
-		}
+		
+		//Preparation de l'envoie
+		if(!mode_http){
+			if (SSL_library_init() < 0){
+				printf("probleme initialisation Openssl library\n") ;
+				exit(1);
+			}
+			ctx= InitCTX();
+			printf("sdqf\n");
+			s_com=OpenConnection(add_serveur, port);
+						printf("sdqf\n");
+			ssl = SSL_new(ctx);    // create new SSL connection state
+			SSL_set_fd(ssl, s_com );    // attach the socket descriptor 
+			if ( SSL_connect(ssl) == -1   ){   //perform the connection 
+				ERR_print_errors_fp(stderr);
+				exit(1);
+			}
+			printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
 			
-		bcopy((char *)entree->h_addr,(char *)&addr.sin_addr,entree->h_length);
-		sock= socket(AF_INET,SOCK_STREAM,0);
-		if(connect(sock, (struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0) {
-			printf("Connexion problem!\n"); 
-			exit(1);
-		} 
-		printf("Connexion established.\n");
-
-		// Envoie
-		if(send(sock,texte,strlen(texte),0)){
+			ShowCerts(ssl);    
+			
+			// Envoie
+			SSL_write(ssl, texte, strlen(texte));
 
 			// Reception
-			if(!mode_http){
-				recv(sock,buffer,sizeof(buffer),0);
-				printf("Server's message:\n>>> %s\n",buffer);
-				
-				bzero(texte,sizeof(texte));
-				strcpy(texte,"/\0");
-				send(sock,texte,strlen(texte)+1,0);
-			}else{
+			bytes = SSL_read(ssl, buffer, sizeof(buffer)); // reponse
+			buffer[bytes] = 0;
+			SSL_free(ssl);        						// release connection state
+			printf("Server's message:\n>>> %s\n",buffer);
+			
+			//Fermeture de la session
+			bzero(texte,sizeof(texte));
+			strcpy(texte,"/\0");
+			SSL_write(ssl, texte, strlen(texte));
+			
+		//	close(s_com );         // close socket 
+   			SSL_CTX_free(ctx);        //release context 
+		}else{
+			addr.sin_port=htons(port); 
+			addr.sin_family=AF_INET; 
+	
+			entree=(struct hostent *)gethostbyname(add_serveur);
+			if (entree==NULL){
+				printf("Connexion host problem! %s unreachable\n",add_serveur);
+				exit(1);
+			}
+			
+			bcopy((char *)entree->h_addr,(char *)&addr.sin_addr,entree->h_length);
+			sock= socket(AF_INET,SOCK_STREAM,0);
+			if(connect(sock, (struct sockaddr *)&addr,sizeof(struct sockaddr_in)) < 0) {
+				printf("Connexion problem!\n"); 
+				exit(1);
+			} 
+			printf("Connexion established.\n");
+					// Envoie
+			if(send(sock,texte,strlen(texte),0)){
 				while(recv(sock,buffer,sizeof(buffer),0)){
 					strcat(res_http,buffer);
 				}
@@ -201,9 +236,9 @@ int main(int argc, char *argv[]) {
 				}
 				// Traitement de la reponse du serveur HTTP		
 				if(DEBUG) printf("\n%s\n",res_http);
-				
+		
 				resultat_traitement = -1;
-				
+		
 				if(res_http!=NULL){
 					// On parse le resultat renvoye par le serveur distant
 					char* temp =strstr(res_http,token);
@@ -212,12 +247,11 @@ int main(int argc, char *argv[]) {
 					// On l'affiche
 					printf("Server's message:\n>>>%s%d\n",recep_msg,resultat_traitement);
 				}
+			}else{
+				printf("Send error");
+				exit(1);
 			}
-		}else{
-			printf("Send error");
-			exit(1);
 		}
-
 		nbCom--;
 	}
 
@@ -272,7 +306,7 @@ void ShowCerts(SSL* ssl) {
 
 
 /// Fichier client_ssl.c pour ipv4
-int main(int argc, char *argv[]) {
+/*int main(int argc, char *argv[]) {
   SSL *ssl;
   SSL_CTX *ctx;
   int s_com, bytes;
@@ -293,16 +327,16 @@ int main(int argc, char *argv[]) {
     else
     {   char *msg = "Hello";
          printf("Connected with %s encryption\n", SSL_get_cipher(ssl));
-        ShowCerts(ssl);        /* get any certs */
-        SSL_write(ssl, msg, strlen(msg));   /* encrypt & send message */
-        bytes = SSL_read(ssl, buf, sizeof(buf)); /* reponse */
+        ShowCerts(ssl);        //get any certs 
+        SSL_write(ssl, msg, strlen(msg));   //encrypt & send message 
+        bytes = SSL_read(ssl, buf, sizeof(buf));// reponse 
         buf[bytes] = 0;
         printf("Received: \"%s\"\n", buf);
-        SSL_free(ssl);        /* release connection state */
+        SSL_free(ssl);        //release connection state 
     }
-    close(s_com );         /* close socket */
-    SSL_CTX_free(ctx);        /* release context */
-    return 0;}
+    close(s_com );         // close socket 
+    SSL_CTX_free(ctx);        //release context 
+    return 0;}*/
 
 int OpenConnection(const char *hostname, int port) {   
 	int sd;
@@ -321,16 +355,10 @@ int OpenConnection(const char *hostname, int port) {
     addr.sin_addr.s_addr = *(long*)(host->h_addr);
     if ( connect(sd, (struct sockaddr*)&addr, sizeof(addr)) != 0 )
     {
-        close(sd);
+        //close(sd);
         perror(hostname);
         abort();
     }
     return sd;
 }
 
-
-
-
-
-
-***************************************************************************************************/

@@ -113,7 +113,10 @@ int main(int argc, char *argv[]) {
 				}
 				chooseAddr[i]='\0';
 				printf("\nEnter server's port:\n>>> "); 
-				scanf("%d", &choosePort);
+				if(!scanf("%d", &choosePort)){
+					printf("Scanf error");
+					exit(1);
+				}
 			}
 			
 			port=(menu?choosePort:atoi(argv[2]));
