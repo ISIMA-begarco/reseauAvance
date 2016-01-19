@@ -180,9 +180,7 @@ int main(int argc, char *argv[]) {
 				exit(1);
 			}
 			ctx= InitCTX();
-			printf("sdqf\n");
 			s_com=OpenConnection(add_serveur, port);
-						printf("sdqf\n");
 			ssl = SSL_new(ctx);    // create new SSL connection state
 			SSL_set_fd(ssl, s_com );    // attach the socket descriptor 
 			if ( SSL_connect(ssl) == -1   ){   //perform the connection 
@@ -198,8 +196,6 @@ int main(int argc, char *argv[]) {
 
 			// Reception
 			bytes = SSL_read(ssl, buffer, sizeof(buffer)); // reponse
-			buffer[bytes] = 0;
-			SSL_free(ssl);        						// release connection state
 			printf("Server's message:\n>>> %s\n",buffer);
 			
 			//Fermeture de la session
@@ -207,6 +203,8 @@ int main(int argc, char *argv[]) {
 			strcpy(texte,"/\0");
 			SSL_write(ssl, texte, strlen(texte));
 			
+			buffer[bytes] = 0;
+			SSL_free(ssl);        						// release connection state
 		//	close(s_com );         // close socket 
    			SSL_CTX_free(ctx);        //release context 
 		}else{
