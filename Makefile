@@ -18,10 +18,10 @@ serveurJava : JServeur.java ThreadClient.java
 	javac -d classes JServeur.java
 
 clientSecu : clientSecu.c
-	$(CXX) $^ -o ./$@ $(CXXFLAGS)
+	$(CXX) $^ -o ./$@ $(CXXFLAGS) -lssl -lcrypto
 	
 serveurSecu : serveurSecu.c
-	$(CXX) $^ -o ./$@ $(CXXFLAGS)
+	$(CXX) $^ -o ./$@ $(CXXFLAGS) -lssl -lcrypto
 
 clean :
 	rm -rf *.bak; rm -rf *.o; rm -rf *~
