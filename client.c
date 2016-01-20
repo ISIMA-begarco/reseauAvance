@@ -8,7 +8,7 @@
 #define DEBUG 0
 
 int main(int argc, char *argv[]) {
-	char buffer[200],texte[200],res_http[1024],requete_http[200],token[200],recep_msg[100];
+	char buffer[1024],texte[200],res_http[1024],requete_http[200],token[200],recep_msg[100];
 	char add_serveur[200], chooseAddr[200];
 	int port=-1, choosePort = -1, chooseHttp=0;
 	
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 				strcpy(recep_msg,"Value of sentence: ");
 				
 			}else{
-				printf("Attention erreur dans le mode HTTP\n reception d'un caractere %c\n",texte[0]);
+				printf("Warning, Error in HTTP mode\nreception of character %c\n",texte[0]);
 			}
 			
 			// On donne a la variable d'envoie la requete http
@@ -188,11 +188,13 @@ int main(int argc, char *argv[]) {
 				strcpy(texte,"/\0");
 				send(sock,texte,strlen(texte)+1,0);
 			}else{
-				while(recv(sock,buffer,sizeof(buffer),0)){
+				/*while(recv(sock,buffer,sizeof(buffer),0)){
 					strcat(res_http,buffer);
-				}
+				}*/
+				recv(sock,buffer,sizeof(buffer),0);
+				strcpy(res_http,buffer);
 				if(res_http==NULL){
-					printf("Pas de reponse du serveur HTTP\n");
+					printf("No HTTP server response\n");
 				}
 				// Traitement de la reponse du serveur HTTP		
 				if(DEBUG) printf("\n%s\n",res_http);

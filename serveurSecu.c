@@ -197,7 +197,7 @@ void * threadEcoute(void * args) {
 		}
 		usleep(1);
 	}
-	close(s_ecoute);          
+	//close(s_ecoute);          
 	SSL_CTX_free(ctx);    
 	pthread_exit(NULL);
 }
