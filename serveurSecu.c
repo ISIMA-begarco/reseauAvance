@@ -91,7 +91,7 @@ lettre countLetters(char * s) {
 void * threadClient(void * args) {
 	char        buf[1500], 
 	            renvoi[1500];
-	int         numero = ((int*) args)[1],
+	int         numero = *((int**) args)[1],
 				client = 1;
 	int sd, bytes;
 	
@@ -174,7 +174,7 @@ void * threadEcoute(void * args) {
 	printf("Waiting for client...\n"); 
 
 	serveur = 1;
-	int tab[2] = {0};
+	void* tab[2] = {0};
 	while(serveur) {	// tant que le serveur n'a pas recu d'ordre d'extinction
 	// on ecoute et allloue un thread
 		if(nbClients < maxClients) {
@@ -183,8 +183,8 @@ void * threadEcoute(void * args) {
 			SSL_set_fd(ssl, scom);   /// set connection socket to SSL state
 			int indice = findFreeThread();
 			if(indice < maxClients) {
-					tab[0] = (int)ssl;
-					tab[1] = indice;
+					tab[0] = ssl;
+					tab[1] = &indice;
 					if( pthread_create( &clients[indice], NULL, threadClient, (void*) tab) < 0 ) {
 							perror("Cannot create client thread.\n");
 					} else {
